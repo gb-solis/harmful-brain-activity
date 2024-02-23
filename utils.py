@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import scipy as sp
+from itertools import pairwise
 from pyarrow import parquet as pq
 from matplotlib import pyplot as plt
 
@@ -8,6 +9,14 @@ BASEPATH = '/kaggle/input/hms-harmful-brain-activity-classification/train_eegs/'
 
 SAMPLE_RATE = 200 # amostra/segundo
 COLUMN_NAMES = ['Fp1', 'F3', 'C3', 'P3', 'F7', 'T3', 'T5', 'O1', 'Fz', 'Cz', 'Pz', 'Fp2', 'F4', 'C4', 'P4', 'F8', 'T4', 'T6', 'O2', 'EKG']
+
+FEAT_COLS: = [['Fp1','F7','T3','T5','O1'],
+         ['Fp1','F3','C3','P3','O1'],
+         ['Fp2','F8','T4','T6','O2'],
+         ['Fp2','F4','C4','P4','O2']]
+
+feats = dict(zip(['LL','LP','RP','RR'], FEAT_COLS))
+
 
 def espectrograma(dados, nome='', cutoff=None):
     ''' Calcula e plota um espectrograma.
@@ -75,3 +84,15 @@ def combined_hist(path=BASEPATH):
             counts = { x[0].as_py() : x[1].as_py() for x in pc.value_counts(col)}
             counters[name].update(counts)
     return counters
+
+def make_spec(df, features):
+    ''' Retorna o espectrograma associado às `features`.
+        Fonte: https://www.kaggle.com/code/cdeotte/how-to-make-spectrogram-from-eeg?scriptVersionId=159854820
+    '''
+    def spec(data): return sp.signal.spectrogram(data)[2]
+    data = (df[col] for col in features)
+    return sum(spec(a-b) for a,b in pairwise(data))
+
+def get_spec(feature_group):
+    '''Retorna o espectrograma associado ao grupo de `features`'''
+    return make_spec(features[feature_group])
